@@ -8,7 +8,7 @@ pub struct User {
     pub password: String,
 }
 
-#[derive(Deserialize, FromRow)]
+#[derive(Deserialize, FromRow, Serialize)]
 pub struct UserWithoutPassword {
     pub id: i32,
     pub username: String,

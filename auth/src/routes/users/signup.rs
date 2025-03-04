@@ -34,5 +34,26 @@ pub async fn signup(
         });
     }
 
-    HttpResponse::Ok().json(())
+    if existing_user_res.unwrap().is_some() {
+        return HttpResponse::BadRequest().json(crate::responses::error::GeneralError {
+            errors: "Choose a different username".to_string(),
+        });
+    }
+
+    // TODO:: Add passxword hash
+    let new_user = sqlx::query_as::<_, UserWithoutPassword>(
+        "insert into users(username, password) values ($1, $2) returning *",
+    )
+    .bind(&sign_up_data.0.username)
+    .bind(&sign_up_data.0.password)
+    .fetch_optional(&app_state.database)
+    .await;
+
+    if new_user.is_err() {
+        return HttpResponse::InternalServerError().json(crate::responses::error::GeneralError {
+            errors: "Issue talking to the database".to_string(),
+        });
+    }
+
+    HttpResponse::Ok().json(new_user.unwrap().unwrap())
 }

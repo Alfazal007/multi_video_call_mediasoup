@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/signup", web::post().to(routes::users::signup::signup)),
             )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("127.0.0.1", 8000))?
     .run()
     .await
 }
