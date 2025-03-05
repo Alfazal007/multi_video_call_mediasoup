@@ -1,4 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
+use bcrypt::hash;
 use validator::Validate;
 
 use crate::{models::users::UserWithoutPassword, AppState};
@@ -40,12 +41,18 @@ pub async fn signup(
         });
     }
 
-    // TODO:: Add passxword hash
+    let hashed_password = hash(&sign_up_data.0.password, 12);
+    if hashed_password.is_err() {
+        return HttpResponse::BadRequest().json(crate::responses::error::GeneralError {
+            errors: "Issue hashing the password of the user".to_string(),
+        });
+    }
+
     let new_user = sqlx::query_as::<_, UserWithoutPassword>(
         "insert into users(username, password) values ($1, $2) returning *",
     )
     .bind(&sign_up_data.0.username)
-    .bind(&sign_up_data.0.password)
+    .bind(hashed_password.unwrap())
     .fetch_optional(&app_state.database)
     .await;
 
