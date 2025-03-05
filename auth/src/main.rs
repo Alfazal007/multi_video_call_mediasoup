@@ -1,13 +1,15 @@
 use std::env;
 
-use actix_web::middleware::Logger;
+use actix_web::middleware::{from_fn, Logger};
 use actix_web::{App, HttpServer};
 
 use actix_web::web;
+use routes::users::current_user::get_current_user;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 
 pub mod helpers;
+pub mod middlewares;
 pub mod models;
 pub mod responses;
 pub mod routes;
@@ -41,7 +43,12 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api/v1/user")
                     .route("/signup", web::post().to(routes::users::signup::signup))
-                    .route("/signin", web::post().to(routes::users::signin::signin)),
+                    .route("/signin", web::post().to(routes::users::signin::signin))
+                    .service(
+                        web::scope("/protected")
+                            .wrap(from_fn(middlewares::auth_middleware::auth_middleware))
+                            .route("/currentUser", web::get().to(get_current_user)),
+                    ),
             )
     })
     .bind(("127.0.0.1", 8000))?
