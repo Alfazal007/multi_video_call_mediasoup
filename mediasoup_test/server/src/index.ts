@@ -5,8 +5,10 @@ import {
 import { types as mediasoupTypes } from "mediasoup";
 import { Message } from './message';
 import { WebRtcTransport } from 'mediasoup/node/lib/WebRtcTransportTypes';
+import express from "express";
+import path from 'path';
+import http from "http";
 
-const wss = new WebSocketServer({ port: 8000 });
 /**
  * Worker
  * |-> Router(s)
@@ -15,6 +17,17 @@ const wss = new WebSocketServer({ port: 8000 });
  *     |-> Consumer Transport(s)
  *         |-> Consumer 
  **/
+
+const app = express();
+
+// Serve static files from the 'public' directory
+app.use('/', express.static(path.join(__dirname, '../public')));
+
+// Create an HTTP server
+const server = http.createServer(app);
+
+// Attach WebSocket server to the HTTP server
+const wss = new WebSocketServer({ server });
 
 let worker: mediasoupTypes.Worker;
 const createWorkerr = async () => {
@@ -208,3 +221,7 @@ const createWebRtcTransport = async (ws: WebSocket) => {
         }))
     }
 }
+
+server.listen(8000, () => {
+    console.log(`Server running on http://localhost:8000`);
+});
