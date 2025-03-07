@@ -1,2 +1,0 @@
-SERVER
-1) create worker on server side
