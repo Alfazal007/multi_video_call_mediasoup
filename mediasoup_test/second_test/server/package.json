@@ -17,5 +17,10 @@
   "devDependencies": {
     "@types/node": "^22.13.9",
     "@types/ws": "^8.18.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "mediasoup"
+    ]
   }
 }
