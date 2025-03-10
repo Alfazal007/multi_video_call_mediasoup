@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsc -b && node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.1",
+  "dependencies": {
+    "mediasoup": "3",
+    "typescript": "^5.8.2",
+    "ws": "^8.18.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "mediasoup"
+    ]
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.0"
+  }
+}

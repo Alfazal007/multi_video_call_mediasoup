@@ -13,8 +13,6 @@ const Main = () => {
     let isProducer = false;
     let socket: WebSocket | null;
 
-
-
     let params = {
         // mediasoup params
         encodings: [
@@ -51,7 +49,6 @@ const Main = () => {
         });
     }
 
-
     const connectSendTransport = async () => {
         audioProducer = await producerTransport.produce(audioParams);
         videoProducer = await producerTransport.produce(videoParams);
@@ -77,9 +74,15 @@ const Main = () => {
         //check if we are already consuming the remoteProducerId
         if (consumingTransports.includes(remoteProducerId)) return;
         consumingTransports.push(remoteProducerId);
+        let messageToSend: OutgoingMessage = {
+            type: OutgoingMessageType.CREATETRANSPORT,
+            data: {
+                isConsumer: true
+            }
+        }
+
+        socket?.send(JSON.stringify(messageToSend));
         await socket.emit('createWebRtcTransport', { consumer: true }, ({ params }) => {
-            // The server sends back params needed 
-            // to create Send Transport on the client side
             if (params.error) {
                 console.log(params.error)
                 return
@@ -137,7 +140,6 @@ const Main = () => {
                     break;
                 case IncomingMessageType.CREATETRANSPORT:
                     producerTransport = device.createSendTransport(receivedMessage.data);
-
                     // @ts-ignore
                     producerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
                         try {
@@ -175,6 +177,7 @@ const Main = () => {
                             errback(error)
                         }
                     })
+                    break;
                 case IncomingMessageType.TRANSPORTPRODUCE:
                     let producersExist = receivedMessage.data.producersExist;
                     // @ts-ignore
