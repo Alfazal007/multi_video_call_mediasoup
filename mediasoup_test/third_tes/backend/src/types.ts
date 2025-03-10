@@ -1,9 +1,14 @@
+import { types as mediaSoupTypes } from "mediasoup";
+import { WebSocket } from "ws";
+
 export enum IncomingMessageType {
-    GETRTPPARAMETERS
+    GETRTPPARAMETERS,
+    CREATETRANSPORT
 }
 
 export enum OutgoingMessageType {
-    GETRTPPARAMETERS
+    GETRTPPARAMETERS,
+    CREATETRANSPORT
 }
 
 export type IncomingMessage = {
@@ -14,4 +19,10 @@ export type IncomingMessage = {
 export type OutgoingMessage = {
     type: OutgoingMessageType,
     data: any
+}
+
+export type TransportTypeCustom = {
+    ws: WebSocket,
+    transport: mediaSoupTypes.WebRtcTransport,
+    isConsumer: boolean
 }

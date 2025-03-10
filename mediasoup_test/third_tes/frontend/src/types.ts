@@ -1,9 +1,16 @@
 export enum OutgoingMessageType {
-    GETRTPPARAMETERS
+    GETRTPPARAMETERS,
+    CREATETRANSPORT,
+    TRANSPORTCONNECT,
+    TRANSPORTPRODUCE,
+    GETPRODUCERS
 }
 
 export enum IncomingMessageType {
-    GETRTPPARAMETERS
+    GETRTPPARAMETERS,
+    CREATETRANSPORT,
+    TRANSPORTPRODUCE,
+    GETPRODUCERS
 }
 
 export type IncomingMessage = {
