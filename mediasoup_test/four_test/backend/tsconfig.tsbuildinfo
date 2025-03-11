@@ -1,1 +1,1 @@
-{"root":["./src/codecs.ts","./src/index.ts","./src/sendMessage.ts","./src/types.ts"],"version":"5.8.2"}
+{"root":["./src/codecs.ts","./src/createWebrtcTransport.ts","./src/index.ts","./src/sendMessage.ts","./src/types.ts"],"version":"5.8.2"}

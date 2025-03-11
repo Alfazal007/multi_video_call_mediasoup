@@ -4,7 +4,8 @@ export type OutgoingMessage = {
 }
 
 export enum OutgoingMessageType {
-    RTPCAPABILITIES
+    RTPCAPABILITIES,
+    CREATEWEBRTCTRANSPORT,
 }
 
 export type IncomingMessage = {
@@ -13,5 +14,7 @@ export type IncomingMessage = {
 }
 
 export enum IncomingMessageType {
-    RTPCAPABILITIES
+    RTPCAPABILITIES,
+    CREATEWEBRTCTRANSPORT,
+    TRANSPORTCONNECT
 }
