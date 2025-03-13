@@ -44,6 +44,10 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/api/v1/user")
                     .route("/signup", web::post().to(routes::users::signup::signup))
                     .route("/signin", web::post().to(routes::users::signin::signin))
+                    .route(
+                        "/isValidUser",
+                        web::post().to(routes::users::is_valid_user::is_valid_user),
+                    )
                     .service(
                         web::scope("/protected")
                             .wrap(from_fn(middlewares::auth_middleware::auth_middleware))
