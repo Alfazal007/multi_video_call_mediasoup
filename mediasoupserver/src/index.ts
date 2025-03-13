@@ -1,13 +1,14 @@
 import http from 'http'
 import socketIo from 'socket.io';
 import { isValidUser } from './helpers/isValidUser';
+import { PeerManager } from './managers/PeerManager';
 
 let server = http.createServer();
 
+let peerManager = PeerManager.getInstance();
 let io = new socketIo.Server(server);
 
 io.on('connection', socket => {
-
     socket.on("establish-connection", async (data: {
         accessToken: string,
         room: string
@@ -24,6 +25,11 @@ io.on('connection', socket => {
             socket.conn.close();
             return;
         }
+
+        if (!peerManager.hasRoom(data.room)) {
+            peerManager.createRoom(data.room);
+        }
+        peerManager.addUserToRoom(data.room, socket);
     });
 
     socket.on('disconnect', () => {
