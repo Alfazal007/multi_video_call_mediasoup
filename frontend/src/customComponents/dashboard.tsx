@@ -19,12 +19,16 @@ export default function Dashbaord() {
         }
     }, [])
 
-    const handleCreateRoom = () => {
+    const handleCreateRoom = (e: any) => {
+        e.preventDefault(); // Add this line
         router(`/room/${roomName}`);
     }
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
+            {
+                JSON.stringify(user)
+            }
             <div className="flex flex-col items-center mb-8">
                 <div className="flex items-center justify-center mb-4">
                     <VideoIcon className="h-10 w-10 text-primary mr-2" />

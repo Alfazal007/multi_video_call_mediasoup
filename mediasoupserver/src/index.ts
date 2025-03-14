@@ -6,9 +6,15 @@ import { PeerManager } from './managers/PeerManager';
 let server = http.createServer();
 
 let peerManager = PeerManager.getInstance();
-let io = new socketIo.Server(server);
+let io = new socketIo.Server(server, {
+    cors: {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST"]
+    }
+});
 
 io.on('connection', socket => {
+    console.log("A user connected:", socket.id);
     socket.on("establish-connection", async (data: {
         accessToken: string,
         room: string

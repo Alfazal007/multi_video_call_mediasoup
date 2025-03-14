@@ -1,19 +1,33 @@
 import { UserContext } from "@/context/UserContext"
+import { useSocket } from "@/hooks/useSocket"
 import { useContext, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 
 const Room = () => {
     const { user } = useContext(UserContext)
-    const router = useNavigate()
+    const route = useNavigate();
+    let socket = useSocket()
     useEffect(() => {
         if (!user) {
-            router("/signin")
+            console.log({ user })
+            if (!user) {
+                console.warn("User not found, redirecting to sign-in.");
+            }
+            route("/signin")
             return
         }
-    }, [])
+    }, [user])
+
+    useEffect(() => {
+    }, [socket])
 
     return (
-        <div>Room</div>
+        <>
+            {
+                JSON.stringify(socket?.id)
+            }
+            <div> Room</div>
+        </>
     )
 }
 
