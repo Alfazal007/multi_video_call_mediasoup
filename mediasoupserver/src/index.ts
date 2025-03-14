@@ -30,10 +30,13 @@ io.on('connection', socket => {
             peerManager.createRoom(data.room);
         }
         peerManager.addUserToRoom(data.room, socket);
+        peerManager.currentState();
     });
 
     socket.on('disconnect', () => {
         console.log("disconnected");
+        peerManager.cleanUp(socket);
+        peerManager.currentState();
     });
 });
 

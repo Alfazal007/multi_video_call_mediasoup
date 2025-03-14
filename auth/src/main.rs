@@ -1,7 +1,8 @@
 use std::env;
 
+use actix_cors::Cors;
 use actix_web::middleware::{from_fn, Logger};
-use actix_web::{App, HttpServer};
+use actix_web::{http, App, HttpServer};
 
 use actix_web::web;
 use routes::users::current_user::get_current_user;
@@ -34,7 +35,19 @@ async fn main() -> std::io::Result<()> {
         .expect("Issue connecting to the database");
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                http::header::CONTENT_TYPE,
+                http::header::AUTHORIZATION,
+            ])
+            .allow_any_header()
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .wrap(Logger::default())
             .app_data(web::Data::new(AppState {
                 database: postgres_pool_connection.clone(),
