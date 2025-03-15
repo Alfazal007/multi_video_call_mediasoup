@@ -4,18 +4,28 @@ import { UserContext } from "@/context/UserContext"
 import { useSocket } from "@/hooks/useSocket"
 import { useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { types as mediasoupTypes } from "mediasoup-client"
+import * as mediasoup from "mediasoup-client"
 
 const Room = () => {
     const { roomName } = useParams();
     const { user } = useContext(UserContext)
     const route = useNavigate()
     let socket = useSocket()
-    const [audioConsume, setAudioConsume] = useState(true);
-    const [videoConsume, setVideoConsume] = useState(true);
+    const [audioConsume, setAudioConsume] = useState(false);
+    const [videoConsume, setVideoConsume] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [rtpCapabilities, setRtpCapabilities] = useState<mediasoupTypes.RtpCapabilities>();
 
     let audioParams: any;
     let videoParams: any = { params };
+
+    useEffect(() => {
+        if (rtpCapabilities) {
+            console.log("RtpCapabilities")
+            console.log(rtpCapabilities)
+        }
+    }, [rtpCapabilities])
 
     useEffect(() => {
         if (!user) {
@@ -41,6 +51,7 @@ const Room = () => {
             accessToken: user?.accessToken,
             room: roomName
         });
+        joinRoom()
         getLocalStream()
     }
 
@@ -76,18 +87,28 @@ const Room = () => {
         }
         audioParams = { track: stream.getAudioTracks()[0], ...audioParams };
         videoParams = { track: stream.getVideoTracks()[0], ...videoParams };
-        joinRoom()
     }
 
     const joinRoom = () => {
-/*        socket?.emit('joinRoom', { roomName }, (data) => {
-            console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
-            rtpCapabilities = data.rtpCapabilities
-
-            // once we have rtpCapabilities from the Router, create Device
-            createDevice()
+        socket?.emit('rtp', { roomName }, (data: { rtpCapabilities: mediasoupTypes.RtpCapabilities }) => {
+            console.log(`Router RTP Capabilities...${data.rtpCapabilities}`)
+            setRtpCapabilities(data.rtpCapabilities)
+            setTimeout(async () => {
+                await createDevice()
+            }, 1000)
         })
- */   }
+    }
+
+    const createDevice = async () => {
+        console.log("create device called")
+        let device = new mediasoup.Device()
+        if (rtpCapabilities) {
+            await device.load({
+                routerRtpCapabilities: rtpCapabilities
+            })
+        }
+        console.log("device loaded")
+    }
 
     useEffect(() => {
         if (!socket) {

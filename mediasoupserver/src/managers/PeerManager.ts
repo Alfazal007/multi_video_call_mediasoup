@@ -1,4 +1,7 @@
 import { Socket } from "socket.io";
+import { types as mediasoupTypes } from "mediasoup";
+import { mediaCodecs } from "./mediacodecs";
+import { worker } from "..";
 
 type Peerdata = {
     socket: Socket;
@@ -6,7 +9,7 @@ type Peerdata = {
 }
 
 export class PeerManager {
-    private roomSocketMap: Map<string, Peerdata[]>;
+    private roomSocketMap: Map<string, { peerData: Peerdata[], router: mediasoupTypes.Router }>;
     private static instance: PeerManager;
     private connectedIdsSet: Set<string>;
 
@@ -26,18 +29,28 @@ export class PeerManager {
         return this.roomSocketMap.has(roomName);
     }
 
-    createRoom(roomName: string) {
-        this.roomSocketMap.set(roomName, []);
+    async createRoom(roomName: string) {
+        const newRouter = await worker.createRouter({
+            mediaCodecs: mediaCodecs
+        })
+
+        this.roomSocketMap.set(roomName, {
+            peerData: [], router: newRouter
+        });
     }
 
     addUserToRoom(roomName: string, socket: Socket) {
         if (this.roomSocketMap.has(roomName)) {
-            let newRoomData = this.roomSocketMap.get(roomName) as Peerdata[];
+            let newRoomDataWithRouter = this.roomSocketMap.get(roomName) as { peerData: Peerdata[], router: mediasoupTypes.Router };
+            let newRoomData = newRoomDataWithRouter?.peerData as Peerdata[];
             newRoomData.push({
                 socket,
                 socketId: socket.id
             });
-            this.roomSocketMap.set(roomName, newRoomData);
+            this.roomSocketMap.set(roomName, {
+                router: newRoomDataWithRouter.router as mediasoupTypes.Router,
+                peerData: newRoomData
+            });
             this.connectedIdsSet.add(socket.id);
         }
     }
@@ -54,15 +67,25 @@ export class PeerManager {
         }
         this.connectedIdsSet.delete(socket.id);
         this.roomSocketMap.forEach((peerDataArray, roomName) => {
-            for (let i = 0; i < peerDataArray.length; i++) {
-                if (peerDataArray[i].socketId == socket.id) {
-                    peerDataArray.splice(i, 1);
+            for (let i = 0; i < peerDataArray.peerData.length; i++) {
+                if (peerDataArray.peerData[i].socketId == socket.id) {
+                    peerDataArray.peerData.splice(i, 1);
                     break;
                 }
             }
-            if (peerDataArray.length == 0) {
+            if (peerDataArray.peerData.length == 0) {
+                //                peerDataArray.router.rtpCapabilities
+                peerDataArray.router.close();
                 this.roomSocketMap.delete(roomName);
             }
         });
+    }
+
+    getRtpCapabilities(roomName: string) {
+        let requiredRoom = this.roomSocketMap.get(roomName);
+        if (!requiredRoom) {
+            return null;
+        }
+        return requiredRoom.router.rtpCapabilities;
     }
 }

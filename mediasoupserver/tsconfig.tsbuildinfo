@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/helpers/isValidUser.ts","./src/managers/PeerManager.ts"],"version":"5.8.2"}
+{"root":["./src/index.ts","./src/helpers/isValidUser.ts","./src/managers/PeerManager.ts","./src/managers/mediacodecs.ts"],"version":"5.8.2"}

@@ -2,6 +2,14 @@ import http from 'http'
 import socketIo from 'socket.io';
 import { isValidUser } from './helpers/isValidUser';
 import { PeerManager } from './managers/PeerManager';
+import * as mediaousp from "mediasoup";
+import { types as mediasoupTypes } from "mediasoup";
+
+export let worker: mediaousp.types.Worker;
+
+(async function () {
+    worker = await mediaousp.createWorker();
+})()
 
 let server = http.createServer();
 
@@ -33,7 +41,7 @@ io.on('connection', socket => {
         }
 
         if (!peerManager.hasRoom(data.room)) {
-            peerManager.createRoom(data.room);
+            await peerManager.createRoom(data.room);
         }
         peerManager.addUserToRoom(data.room, socket);
         peerManager.currentState();
@@ -44,6 +52,12 @@ io.on('connection', socket => {
         peerManager.cleanUp(socket);
         peerManager.currentState();
     });
+
+    socket.on('rtp', ({ roomName }, callback) => {
+        let rtpCapabilities = peerManager.getRtpCapabilities(roomName);
+        callback({ rtpCapabilities })
+    })
+
 });
 
 server.listen(3000, () => {
