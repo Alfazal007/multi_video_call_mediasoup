@@ -12,13 +12,51 @@ const Room = () => {
     const { user } = useContext(UserContext)
     const route = useNavigate()
     let socket = useSocket()
-    const [audioConsume, setAudioConsume] = useState(false);
-    const [videoConsume, setVideoConsume] = useState(false);
+    const [audioConsume, setAudioConsume] = useState(true);
+    const [videoConsume, setVideoConsume] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [rtpCapabilities, setRtpCapabilities] = useState<mediasoupTypes.RtpCapabilities>();
+    const [producerTransportState, setProducerTransportState] = useState<mediasoupTypes.Transport>();
+    let audioProducer: mediasoupTypes.Producer, videoProducer: mediasoupTypes.Producer;
 
-    let audioParams: any;
-    let videoParams: any = { params };
+    const audioParamsRef = useRef<any>(null);
+    const videoParamsRef = useRef<any>({ params });
+
+    async function setTrackAndData() {
+        if (!producerTransportState) {
+            console.log("early return")
+            return
+        }
+        if (audioConsume) {
+            console.log(audioParamsRef.current)
+            audioProducer = await producerTransportState.produce(audioParamsRef.current);
+            audioProducer.on('trackended', () => {
+                console.log('audio track ended')
+            })
+            audioProducer.on('transportclose', () => {
+                console.log('audio transport ended')
+            })
+        } else if (!audioConsume) {
+            audioProducer?.close();
+        }
+        if (videoConsume) {
+            console.log(videoParamsRef.current)
+            videoProducer = await producerTransportState.produce(videoParamsRef.current);
+            videoProducer.on('trackended', () => {
+                console.log('video track ended')
+            })
+            videoProducer.on('transportclose', () => {
+                console.log('video transport ended')
+            })
+        } else if (!videoConsume) {
+            videoProducer?.close();
+        }
+    }
+
+    useEffect(() => {
+        setTrackAndData()
+    }, [producerTransportState, audioConsume, videoConsume])
+
 
     useEffect(() => {
         if (rtpCapabilities) {
@@ -85,29 +123,126 @@ const Room = () => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
         }
-        audioParams = { track: stream.getAudioTracks()[0], ...audioParams };
-        videoParams = { track: stream.getVideoTracks()[0], ...videoParams };
+        audioParamsRef.current = { track: stream.getAudioTracks()[0], ...audioParamsRef.current };
+        videoParamsRef.current = { track: stream.getVideoTracks()[0], ...videoParamsRef.current };
+        console.log("set data")
+        console.log(audioParamsRef.current)
     }
 
     const joinRoom = () => {
-        socket?.emit('rtp', { roomName }, (data: { rtpCapabilities: mediasoupTypes.RtpCapabilities }) => {
+        socket?.emit('rtp', { roomName }, async (data: { rtpCapabilities: mediasoupTypes.RtpCapabilities }) => {
             console.log(`Router RTP Capabilities...${data.rtpCapabilities}`)
             setRtpCapabilities(data.rtpCapabilities)
-            setTimeout(async () => {
-                await createDevice()
-            }, 1000)
+            setTimeout(
+                async () => {
+                    await createDevice(data.rtpCapabilities)
+                }, 2000)
         })
     }
 
-    const createDevice = async () => {
+    const createDevice = async (rtpCaps: mediasoupTypes.RtpCapabilities) => {
         console.log("create device called")
         let device = new mediasoup.Device()
-        if (rtpCapabilities) {
-            await device.load({
-                routerRtpCapabilities: rtpCapabilities
-            })
-        }
+        console.log({ rtpCaps })
+        await device.load({
+            routerRtpCapabilities: rtpCaps
+        })
         console.log("device loaded")
+        await new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(1);
+            }, 2000);
+        });
+
+        console.log("after promise")
+
+        // create the send transport
+        socket?.emit('createWebRtcTransport', { consumer: false, roomName }, async ({
+            id,
+            iceParameters,
+            iceCandidates,
+            dtlsParameters,
+            error
+        }: {
+            id: string,
+            iceParameters: mediasoupTypes.IceParameters,
+            iceCandidates: mediasoupTypes.IceCandidate[],
+            dtlsParameters: mediasoupTypes.DtlsParameters,
+            error: any
+        }) => {
+            if (error) {
+                console.log(error)
+                return
+            }
+
+            let producerTransport = device.createSendTransport({
+                dtlsParameters,
+                iceParameters,
+                iceCandidates,
+                id
+            })
+
+            producerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+                try {
+                    socket.emit('transport-connect', {
+                        dtlsParameters,
+                        consumer: false
+                    })
+                    console.log("Producer transport connceted");
+                    callback()
+                } catch (error: any) {
+                    errback(error)
+                }
+            })
+
+            producerTransport.on('produce', async (parameters, callback, errback) => {
+                console.log(parameters)
+                try {
+                    socket.emit('transport-produce', {
+                        kind: parameters.kind,
+                        rtpParameters: parameters.rtpParameters,
+                        appData: parameters.appData,
+                        roomName
+                    }, ({ id, producersExist }: { id: string, producersExist: boolean }) => {
+                        console.log("callback called")
+                        callback({ id })
+                        if (producersExist) {
+                            socket.emit('getProducers', roomName, (producerIds: string[]) => {
+                                console.log(producerIds)
+                                //TODO: for each of them signal a consumer transport
+                            })
+                        }
+                        else { console.log("no producer") }
+                    })
+                } catch (error: any) {
+                    errback(error)
+                }
+            })
+
+            setProducerTransportState(producerTransport)
+        })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     useEffect(() => {

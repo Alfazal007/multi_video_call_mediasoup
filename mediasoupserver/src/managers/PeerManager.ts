@@ -2,20 +2,32 @@ import { Socket } from "socket.io";
 import { types as mediasoupTypes } from "mediasoup";
 import { mediaCodecs } from "./mediacodecs";
 import { worker } from "..";
+import { WebRtcTransport } from "mediasoup/node/lib/WebRtcTransportTypes";
 
 type Peerdata = {
     socket: Socket;
     socketId: string;
 }
 
+type TransportData = {
+    transport: WebRtcTransport,
+    roomName: string,
+    isConsumer: boolean,
+    socketId: string
+}
+
 export class PeerManager {
     private roomSocketMap: Map<string, { peerData: Peerdata[], router: mediasoupTypes.Router }>;
     private static instance: PeerManager;
     private connectedIdsSet: Set<string>;
+    private transports: TransportData[];
+    private producers: { roomName: string, producer: mediasoupTypes.Producer, socketId: string }[];
 
     private constructor() {
         this.roomSocketMap = new Map();
         this.connectedIdsSet = new Set();
+        this.transports = []
+        this.producers = []
     }
 
     static getInstance(): PeerManager {
@@ -83,9 +95,81 @@ export class PeerManager {
 
     getRtpCapabilities(roomName: string) {
         let requiredRoom = this.roomSocketMap.get(roomName);
+        console.log({ requiredRoom })
         if (!requiredRoom) {
             return null;
         }
         return requiredRoom.router.rtpCapabilities;
+    }
+
+    getRouter(roomName: string) {
+        let requiredRoom = this.roomSocketMap.get(roomName);
+        return requiredRoom?.router;
+    }
+
+    addTransport(transport: WebRtcTransport, roomName: string, isConsumer: boolean, socketId: string) {
+        this.transports = [
+            ...this.transports,
+            {
+                isConsumer,
+                roomName,
+                transport,
+                socketId
+            }
+        ]
+    }
+
+    getTransport(socketId: string, isConsumer: boolean) {
+        const transport = this.transports.find((transport) =>
+            transport.socketId === socketId && transport.isConsumer === isConsumer
+        );
+        return transport
+    }
+
+    transportDisplayer() {
+        console.log(this.transports)
+    }
+
+    addProducer(producer: mediasoupTypes.Producer, roomName: string, socketId: string) {
+        this.producers = [
+            ...this.producers,
+            {
+                producer,
+                roomName,
+                socketId
+            }
+        ]
+    }
+
+    remove(producerId: string) {
+        this.producers = this.producers.filter((producer) => producer.producer.id != producerId)
+    }
+
+    hasProducers(roomName: string) {
+        let count = 0;
+        this.producers.forEach((producer) => {
+            if (producer.roomName == roomName && !producer.producer.closed) {
+                count++;
+            }
+        })
+        // one for audio and one for video
+        return count > 2
+    }
+
+    removeTransport(socketId: string) {
+        this.transports = this.transports.filter((transport) => transport.socketId !== socketId)
+        this.transports = this.transports.filter((transport) => transport.socketId !== socketId)
+    }
+
+    getProduerList(roomName: string, socketId: string) {
+        let producers: string[] = []
+        this.producers.forEach((producer) => {
+            if (producer.roomName === roomName && producer.socketId !== socketId)
+                producers = [
+                    ...producers,
+                    producer.producer.id
+                ]
+        })
+        return producers
     }
 }
