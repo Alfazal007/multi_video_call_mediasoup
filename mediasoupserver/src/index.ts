@@ -18,7 +18,7 @@ let server = http.createServer();
 let peerManager = PeerManager.getInstance();
 let io = new socketIo.Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "http://192.168.69.11:5173"],
+        origin: ["http://localhost:5173"],
         methods: ["GET", "POST"]
     }
 });
@@ -217,7 +217,7 @@ const createWebRtcTransport = async (router: Router): Promise<WebRtcTransport> =
                 listenIps: [
                     {
                         ip: '0.0.0.0',
-                        announcedIp: '192.168.69.11',
+                        announcedIp: '127.0.0.1',
                     }
                 ],
                 enableUdp: true,
