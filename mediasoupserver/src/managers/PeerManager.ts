@@ -3,6 +3,7 @@ import { types as mediasoupTypes } from "mediasoup";
 import { mediaCodecs } from "./mediacodecs";
 import { worker } from "..";
 import { WebRtcTransport } from "mediasoup/node/lib/WebRtcTransportTypes";
+import { Consumer } from "mediasoup/node/lib/ConsumerTypes";
 
 type Peerdata = {
     socket: Socket;
@@ -22,12 +23,14 @@ export class PeerManager {
     private connectedIdsSet: Set<string>;
     private transports: TransportData[];
     private producers: { roomName: string, producer: mediasoupTypes.Producer, socketId: string }[];
+    private consumers: { roomName: string, consumer: mediasoupTypes.Consumer, socketId: string }[];
 
     private constructor() {
         this.roomSocketMap = new Map();
         this.connectedIdsSet = new Set();
         this.transports = []
         this.producers = []
+        this.consumers = []
     }
 
     static getInstance(): PeerManager {
@@ -172,4 +175,33 @@ export class PeerManager {
         })
         return producers
     }
+
+
+    getConsumerTranport(serverConsumerTransportId: string): WebRtcTransport | undefined {
+        let transport = this.transports.find((transpor) => (transpor.isConsumer && transpor.transport.id == serverConsumerTransportId))?.transport
+        return transport
+    }
+
+
+    getTransportsForRemovingConsumers(consumerId: string) {
+        this.transports = this.transports.filter(transportData => transportData.transport.id !== consumerId)
+    }
+
+    removeConsumers(consumerId: string) {
+        this.consumers = this.consumers.filter((consumer) => consumer.consumer.id !== consumerId)
+    }
+
+    addConsumer(consumer: Consumer, roomName: string, socketId: string) {
+        this.consumers.push({
+            consumer,
+            roomName,
+            socketId
+        })
+    }
+
+    async resumeConsumer(consumerId: string) {
+        const consumer = this.consumers.find(consumerData => consumerData.consumer.id === consumerId)
+        await consumer?.consumer.resume()
+    }
+
 }

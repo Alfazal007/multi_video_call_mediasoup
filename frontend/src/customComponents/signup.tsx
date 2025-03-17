@@ -44,7 +44,7 @@ export default function SignUpPage() {
         }
 
         try {
-            const response = await axios.post("http://localhost:8000/api/v1/user/signup", {
+            const response = await axios.post("http://192.168.69.11:8000/api/v1/user/signup", {
                 username,
                 password
             })

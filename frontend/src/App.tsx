@@ -40,6 +40,8 @@ function App() {
             <div>
                 <UserProvider>
                     <RouterProvider router={router} />
+                    <div id='videoContainer'></div>
+
                 </UserProvider>
             </div>
         </>

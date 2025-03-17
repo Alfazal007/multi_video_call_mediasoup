@@ -32,7 +32,7 @@ export default function SignInPage() {
         }
 
         try {
-            const response = await axios.post("http://localhost:8000/api/v1/user/signin", {
+            const response = await axios.post("http://192.168.69.11:8000/api/v1/user/signin", {
                 username,
                 password
             }, {

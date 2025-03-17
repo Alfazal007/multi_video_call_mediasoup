@@ -18,10 +18,11 @@ let server = http.createServer();
 let peerManager = PeerManager.getInstance();
 let io = new socketIo.Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: ["http://localhost:5173", "http://192.168.69.11:5173"],
         methods: ["GET", "POST"]
     }
 });
+
 
 io.on('connection', socket => {
     console.log("A user connected:", socket.id);
@@ -126,9 +127,86 @@ io.on('connection', socket => {
         callback(producerList)
     })
 
+    socket.on('transport-recv-connect', async ({ dtlsParameters, serverConsumerTransportId }) => {
+        console.log(`DTLS PARAMS: ${dtlsParameters}`)
+        let transport = peerManager.getConsumerTranport(serverConsumerTransportId);
+        await transport?.connect({ dtlsParameters })
+    })
+
+
+
+
+
+    socket.on('consume', async ({ rtpCapabilities, remoteProducerId, serverConsumerTransportId, roomName }, callback) => {
+        try {
+            let consumerTransport = peerManager.getConsumerTranport(serverConsumerTransportId);
+            const router = peerManager.getRouter(roomName);
+            if (!router || !consumerTransport) {
+                return
+            }
+            // check if the router can consume the specified producer
+            console.log("\n\n\n\n\n can router consumer \n\n\n\n", router.canConsume({
+                producerId: remoteProducerId,
+                rtpCapabilities
+            }))
+            if (router.canConsume({
+                producerId: remoteProducerId,
+                rtpCapabilities
+            })) {
+                // transport can now consume and return a consumer
+                const consumer = await consumerTransport.consume({
+                    producerId: remoteProducerId,
+                    rtpCapabilities,
+                    paused: true,
+                })
+
+                consumer.on('transportclose', () => {
+                    console.log('transport close from consumer')
+                })
+
+                consumer.on('producerclose', () => {
+                    console.log('producer of consumer closed')
+                    socket.emit('producer-closed', { remoteProducerId })
+
+                    consumerTransport.close()
+
+                    peerManager.getTransportsForRemovingConsumers(consumer.id)
+                    consumer.close()
+                    peerManager.removeConsumers(consumer.id)
+                })
+
+                peerManager.addConsumer(consumer, roomName, socket.id)
+
+                // from the consumer extract the following params
+                // to send back to the Client
+                const params = {
+                    id: consumer.id,
+                    producerId: remoteProducerId,
+                    kind: consumer.kind,
+                    rtpParameters: consumer.rtpParameters,
+                    serverConsumerId: consumer.id,
+                }
+
+                // send the parameters to the client
+                callback({ params })
+            }
+        } catch (error: any) {
+            console.log(error.message)
+            callback({
+                params: {
+                    error: error
+                }
+            })
+        }
+    })
+
+    socket.on('consumer-resume', async ({ serverConsumerId }) => {
+        console.log('consumer resume')
+        await peerManager.resumeConsumer(serverConsumerId)
+    })
 });
 
-server.listen(3000, () => {
+server.listen(3000, '0.0.0.0', () => {
     console.log("server listening on port 3000");
 });
 
@@ -139,7 +217,7 @@ const createWebRtcTransport = async (router: Router): Promise<WebRtcTransport> =
                 listenIps: [
                     {
                         ip: '0.0.0.0',
-                        announcedIp: '127.0.0.1',
+                        announcedIp: '192.168.69.11',
                     }
                 ],
                 enableUdp: true,
